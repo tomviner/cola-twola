@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from .models import import_tweets_from_json, load_tweets
+from .models import import_tweets_from_json, load_tweets, create_db
 
 
 JSON_RESPONSES = [
@@ -22,7 +22,9 @@ def test_load_tweets():
     Load some tweets and make sure they are persistent.
     With server error resposes and duplicate tweets ignored.
     """
-    import_tweets_from_json(json_string, tweet_source=mock_tweet_source)
+    create_db()
+
+    import_tweets_from_json(tweet_source=mock_tweet_source)
 
     tweets = load_tweets(just_coke=False)
     expected_ids = set([3, 7, 13])
