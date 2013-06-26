@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, \
-    create_engine
+    create_engine, desc
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -111,7 +111,7 @@ class DbSession(object):
         """
 
         session = self.get_db_session()
-        tweets = session.query(Tweet)
+        tweets = session.query(Tweet).order_by(desc(Tweet.sentiment))
         if just_coke:
             # TODO:
             # make this work with an SQL regex query, something like:
