@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from models import DbSession
+from webapp import app
 
 
 JSON_RESPONSES = [
@@ -19,7 +20,7 @@ def mock_tweet_source():
 
 def test_load_tweets():
     """
-    Load some tweets and make sure they are persistent.
+    Import some tweets and make sure they are persistent.
     With server error responses and duplicate tweets ignored.
     """
     db = DbSession(test=True)
@@ -39,4 +40,15 @@ def test_load_tweets():
     expected_num = len(expected_ids)
     assert len(tweets) == expected_num, "Found %s, expected %s" % (len(tweets), expected_num)
 
+def test_tweets_ordering():
+    """
+    Import some tweets and make sure they are returned in decending order
+    of sentiment.
+    """
+    db = DbSession(test=True)
+    db.create_db()
+    db.import_tweets_from_json(tweet_source=mock_tweet_source)
 
+    tweets = db.load_tweets(just_coke=False)
+    sentiments = [tw.sentiment for tw in tweets]
+    assert sentiments == sorted(sentiments, reverse=True), "Expectd decending sentiment, found %s" % sentiments

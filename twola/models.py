@@ -50,7 +50,6 @@ class DbSession(object):
     """
     Database wrapper, so we keep a reference to the engine used
     """
-
     def __init__(self, test=False):
         if test:
             self.engine = create_engine('sqlite:///:memory:', echo=False)
@@ -126,6 +125,6 @@ if __name__ == '__main__':
     db = DbSession()
     db.create_db()
     db.import_tweets_from_json()
-    print len(db.load_tweets(False)), 'total'
-    print len(db.load_tweets(True)), 'tweets with coke'
-    print [t.id for t in db.load_tweets(False)]
+    print len(db.load_tweets(just_coke=False)), 'total'
+    print len(db.load_tweets(just_coke=True)), 'tweets with coke'
+    print [t.id for t in db.load_tweets(just_coke=False)]
