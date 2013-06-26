@@ -46,79 +46,86 @@ class Tweet(Base):
         )
 
 
-if 'nosetests' in sys.argv[0]:
-    engine = create_engine('sqlite:///:memory:', echo=False)
-else:
-    engine = create_engine('sqlite:////tmp/twola.db', echo=False)
-
-
-def get_db_session():
-    Session = sessionmaker(bind=engine)
-    return Session()
-
-def create_db():
+class DbSession(object):
     """
-    create db if it doesn't exist
-    """
-    session = get_db_session()
-    Base.metadata.create_all(engine)
-
-
-def api_tweet_source(n=2):
-    """
-    make n requests to the API. log errors but don't raise exceptions
-    yielding json bodies as unicode
-    """
-    for _ in xrange(n):
-        response = requests.get(API_URL)
-        try:
-            response.raise_for_status()
-        except requests.HTTPError as e:
-            logger.error("API request error: %s", e)
-            continue
-        yield response.text
-
-
-def import_tweets_from_json(tweet_source=api_tweet_source):
-    """
-    takes API response content and saves any new tweets to the db
-    """
-    session = get_db_session()
-    for json_string in tweet_source():
-        json_obj = json.loads(json_string)
-        # this works for lists and dicts
-        if 'error' in json_obj:
-            msg = json_obj['error']
-            logger.error("API request error: %s", msg)
-            continue
-        if not isinstance(json_obj, list):
-            raise TypeError("Expected a list of tweets, instead found %s" % json_obj)
-        for tweet in json_obj:
-            # only add if not already in db
-            if not session.query(Tweet).filter('id=%s' % tweet['id']).count():
-                tweet_obj = Tweet.from_api_data(tweet)
-                session.add(tweet_obj)
-    session.commit()
-
-
-def load_tweets(just_coke):
-    """
-    return stored tweets
+    Database wrapper, so we keep a reference to the engine used
     """
 
-    session = get_db_session()
-    tweets = session.query(Tweet)
-    if just_coke:
-        # TODO:
-        # make this work with an SQL regex query, something like:
-        # return tweets.filter(Tweet.message.op('regexp')(MAGIC_WORDS))
-        return [tw for tw in tweets if MAGIC_WORDS_RE.findall(tw.message)]
-    return tweets.all()
+    def __init__(self, test=False):
+        if test:
+            self.engine = create_engine('sqlite:///:memory:', echo=False)
+        else:
+            self.engine = create_engine('sqlite:////tmp/twola.db', echo=False)
+
+    def get_db_session(self):
+        Session = sessionmaker(bind=self.engine)
+        return Session()
+
+    def create_db(self):
+        """
+        create db if it doesn't exist
+        """
+        session = self.get_db_session()
+        Base.metadata.create_all(self.engine)
+
+
+    def api_tweet_source(self, n=2):
+        """
+        make n requests to the API. log errors but don't raise exceptions
+        yielding json bodies as unicode
+        """
+        for _ in xrange(n):
+            response = requests.get(API_URL)
+            try:
+                response.raise_for_status()
+            except requests.HTTPError as e:
+                logger.error("API request error: %s", e)
+                continue
+            yield response.text
+
+    def import_tweets_from_json(self, tweet_source=None):
+        """
+        takes API response content and saves any new tweets to the db
+        """
+        if tweet_source is None:
+            tweet_source = self.api_tweet_source
+        session = self.get_db_session()
+        for json_string in tweet_source():
+            json_obj = json.loads(json_string)
+            # this works for lists and dicts
+            if 'error' in json_obj:
+                msg = json_obj['error']
+                logger.error("API request error: %s", msg)
+                continue
+            if not isinstance(json_obj, list):
+                raise TypeError("Expected a list of tweets, instead found %s" % json_obj)
+            for tweet in json_obj:
+                # only add if not already in db
+                if not session.query(Tweet).filter('id=%s' % tweet['id']).count():
+                    tweet_obj = Tweet.from_api_data(tweet)
+                    session.add(tweet_obj)
+        session.commit()
+
+    def load_tweets(self, just_coke):
+        """
+        return stored tweets
+        """
+
+        session = self.get_db_session()
+        tweets = session.query(Tweet)
+        if just_coke:
+            # TODO:
+            # make this work with an SQL regex query, something like:
+            # return tweets.filter(Tweet.message.op('regexp')(MAGIC_WORDS))
+            return [tw for tw in tweets if MAGIC_WORDS_RE.findall(tw.message)]
+        session.close()
+        return tweets.all()
 
 
 if __name__ == '__main__':
-    create_db()
-    import_tweets_from_json()
-    print len(load_tweets(False)), 'total'
-    print len(load_tweets(True)), 'tweets with coke'
-    print [t.id for t in load_tweets(False)]
+    db = DbSession()
+    db.create_db()
+    db.import_tweets_from_json()
+    print len(db.load_tweets(False)), 'total'
+    print len(db.load_tweets(True)), 'tweets with coke'
+    print [t.id for t in db.load_tweets(False)]

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from .models import import_tweets_from_json, load_tweets, create_db
+from models import DbSession
 
 
 JSON_RESPONSES = [
@@ -22,18 +22,19 @@ def test_load_tweets():
     Load some tweets and make sure they are persistent.
     With server error responses and duplicate tweets ignored.
     """
-    create_db()
+    db = DbSession(test=True)
+    db.create_db()
 
-    import_tweets_from_json(tweet_source=mock_tweet_source)
+    db.import_tweets_from_json(tweet_source=mock_tweet_source)
 
-    tweets = load_tweets(just_coke=False)
+    tweets = db.load_tweets(just_coke=False)
     expected_ids = set([3, 7, 13])
     expected_num = len(expected_ids)
     assert len(tweets) == expected_num, "Found %s, expected %s" % (len(tweets), expected_num)
     found_ids = set(tw.id for tw in tweets)
     assert found_ids == expected_ids, "Found %s, expected %s" % (found_ids, expected_ids)
 
-    tweets = load_tweets(just_coke=True)
+    tweets = db.load_tweets(just_coke=True)
     expected_ids = set([3])
     expected_num = len(expected_ids)
     assert len(tweets) == expected_num, "Found %s, expected %s" % (len(tweets), expected_num)
