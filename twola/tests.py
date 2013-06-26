@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from flask.ext.testing import TestCase
+
 from models import DbSession
 from webapp import app
 
@@ -52,3 +54,26 @@ def test_tweets_ordering():
     tweets = db.load_tweets(just_coke=False)
     sentiments = [tw.sentiment for tw in tweets]
     assert sentiments == sorted(sentiments, reverse=True), "Expectd decending sentiment, found %s" % sentiments
+
+
+class TestWebApp(TestCase):
+    def create_app(self):
+        # This method is required by flask.ext.testing.TestCase. It is called
+        # before setUp().
+        return app
+
+    def setUp(self):
+        self.db = DbSession(test=True)
+        self.db.create_db()
+        self.db.import_tweets_from_json(tweet_source=mock_tweet_source)
+
+
+    def test_tweet_list_page():
+        """
+        Ensure the list page displays just coke based tweets
+        """
+        response = self.client.get('/')
+        tweets = self.get_context_variable('tweets')
+        in_context_tweets = [tw.message for tw in tweets]
+        expected_tweets = [tw.message for tw in self.db.load_tweets(just_coke=True)]
+        self.assertEqual(in_context_tweets, expected_tweets)
