@@ -12,9 +12,12 @@ from sqlalchemy.orm import sessionmaker
 
 
 API_URL = 'http://adaptive-test-api.herokuapp.com/tweets.json'
-MAGIC_WORDS_RE = re.compile('coke|coca-cola|diet cola', re.IGNORECASE)
+MAGIC_WORDS = r'coke|coca-cola|diet cola'
+MAGIC_WORDS_RE = re.compile(MAGIC_WORDS, re.IGNORECASE)
+
 
 logger = logging.getLogger(__name__)
+logging.basicConfig()
 Base = declarative_base()
 
 class Tweet(Base):
@@ -30,21 +33,24 @@ class Tweet(Base):
     def __repr__(self):
        return "<Tweet((%s)%s: %s... %s)>" % (self.id, self.user, self.message[:10], self.sentiment)
 
-    # @classmethod
-    def store_from_api(self, tweet):
-        # self = cls()
-        self.user = tweet['user_handle']
-        self.num_followers = tweet['followers']
-        self.message = tweet['message']
-        self.sentiment = tweet['sentiment']
-        self.created_at = tweet['created_at']
-        self.updated_at = tweet['updated_at']
+    @classmethod
+    def from_api_data(cls, tweet):
+        return cls(
+            id=tweet['id'],
+            user=tweet['user_handle'],
+            num_followers=tweet['followers'],
+            message=tweet['message'],
+            sentiment=tweet['sentiment'],
+            created_at=datetime.strptime(tweet['created_at'], '%Y-%m-%dT%H:%M:%SZ'),
+            updated_at=datetime.strptime(tweet['updated_at'], '%Y-%m-%dT%H:%M:%SZ'),
+        )
 
 
-if 'test' in sys.argv[0]:
-    engine = create_engine('sqlite:///:memory:', echo=True)
+if 'nosetests' in sys.argv[0]:
+    engine = create_engine('sqlite:///:memory:', echo=False)
 else:
-    engine = create_engine('sqlite:////tmp/twola.db', echo=True)
+    engine = create_engine('sqlite:////tmp/twola.db', echo=False)
+
 
 def get_db_session():
     Session = sessionmaker(bind=engine)
@@ -57,26 +63,13 @@ def create_db():
     session = get_db_session()
     Base.metadata.create_all(engine)
 
-def add_data():
-    session = get_db_session()
-    tw = Tweet(
-            user="Tom",
-            num_followers=3,
-            message="I love coke",
-            sentiment=0.8,
-            created_at=datetime.now(),
-            updated_at=datetime.now()
-        )
-    session.add(tw)
-    session.commit()
 
-def print_data():
-    session = get_db_session()
-    print session.query(Tweet).all()
-
-
-def api_tweet_source(n=5):
-    for _ in xrange(5):
+def api_tweet_source(n=2):
+    """
+    make n requests to the API. log errors but don't raise exceptions
+    yielding json bodies as unicode
+    """
+    for _ in xrange(n):
         response = requests.get(API_URL)
         try:
             response.raise_for_status()
@@ -93,7 +86,7 @@ def import_tweets_from_json(tweet_source=api_tweet_source):
     session = get_db_session()
     for json_string in tweet_source():
         json_obj = json.loads(json_string)
-        # this work for lists and dicts
+        # this works for lists and dicts
         if 'error' in json_obj:
             msg = json_obj['error']
             logger.error("API request error: %s", msg)
@@ -101,7 +94,10 @@ def import_tweets_from_json(tweet_source=api_tweet_source):
         if not isinstance(json_obj, list):
             raise TypeError("Expected a list of tweets, instead found %s" % json_obj)
         for tweet in json_obj:
-            Tweet().store_from_api(tweet)
+            # only add if not already in db
+            if not session.query(Tweet).filter('id=%s' % tweet['id']).count():
+                tweet_obj = Tweet.from_api_data(tweet)
+                session.add(tweet_obj)
     session.commit()
 
 
@@ -111,15 +107,18 @@ def load_tweets(just_coke):
     """
 
     session = get_db_session()
-    tweets = session.query(Tweet).all()
+    tweets = session.query(Tweet)
     if just_coke:
+        # TODO:
+        # make this work with an SQL regex query, something like:
+        # return tweets.filter(Tweet.message.op('regexp')(MAGIC_WORDS))
         return [tw for tw in tweets if MAGIC_WORDS_RE.findall(tw.message)]
-    return [tw for tw in tweets]
+    return tweets.all()
 
 
 if __name__ == '__main__':
     create_db()
-    add_data()
-    print_data()
-
     import_tweets_from_json()
+    print len(load_tweets(False)), 'total'
+    print len(load_tweets(True)), 'tweets with coke'
+    print [t.id for t in load_tweets(False)]

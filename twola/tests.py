@@ -20,7 +20,7 @@ def mock_tweet_source():
 def test_load_tweets():
     """
     Load some tweets and make sure they are persistent.
-    With server error resposes and duplicate tweets ignored.
+    With server error responses and duplicate tweets ignored.
     """
     create_db()
 
@@ -30,7 +30,7 @@ def test_load_tweets():
     expected_ids = set([3, 7, 13])
     expected_num = len(expected_ids)
     assert len(tweets) == expected_num, "Found %s, expected %s" % (len(tweets), expected_num)
-    found_ids = set(tweet.id for id in tweets)
+    found_ids = set(tw.id for tw in tweets)
     assert found_ids == expected_ids, "Found %s, expected %s" % (found_ids, expected_ids)
 
     tweets = load_tweets(just_coke=True)
