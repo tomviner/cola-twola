@@ -80,9 +80,25 @@ class TestWebApp(TestCase):
         tweets = self.get_context_variable('tweets')
         in_context_messages = [tw.message for tw in tweets]
         expected_messages = [tw.message for tw in self.db.load_tweets(just_coke=True)]
-        print in_context_messages
-        print expected_messages
+        # check context
         self.assertListEqual(in_context_messages, expected_messages)
 
+        # check page
         for message in expected_messages:
             self.assertIn(message, response.data)
+
+    def test_tweet_detail_page(self):
+        """
+        Test tweet detail page
+        """
+        expected_tweet = self.db.load_tweets(just_coke=True)[0]
+        response = self.client.get('/tweet/%s/' % expected_tweet.id)
+        in_page_tweet = self.get_context_variable('tweet')
+
+        # check context
+        self.assertEqual(in_page_tweet.message, expected_tweet.message)
+
+        # check page
+        self.assertIn(expected_tweet.message, response.data)
+        self.assertIn(': %s<' % expected_tweet.sentiment, response.data)
+        self.assertIn(': %s<' % expected_tweet.num_followers, response.data)
