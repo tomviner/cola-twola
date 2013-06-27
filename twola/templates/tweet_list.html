@@ -8,7 +8,7 @@
         <ul>
             {% for tweet in tweets %}
                 <li>
-                    {{ tweet.message }}
+                    <a href="{{ url_for('tweet_detail', tweet_id=tweet.id) }}">{{ tweet.message }}</a>
                 </li>
             {% endfor %}
         </ul>

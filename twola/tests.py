@@ -102,3 +102,12 @@ class TestWebApp(TestCase):
         self.assertIn(expected_tweet.message, response.data)
         self.assertIn(': %s<' % expected_tweet.sentiment, response.data)
         self.assertIn(': %s<' % expected_tweet.num_followers, response.data)
+
+    def test_nontweet_detail_page(self):
+        """
+        Test a non tweet returns a 404
+        """
+        unexpected_id = max(tw.id for tw in self.db.load_tweets(just_coke=False)) + 1
+        response = self.client.get('/tweet/%s/' % unexpected_id)
+        self.assertEqual(response.status_code, 404)
+
