@@ -120,11 +120,18 @@ class DbSession(object):
         tweets = session.query(Tweet).order_by(desc(Tweet.sentiment))
         if just_coke:
             # TODO:
-            # make this work with an SQL regex query, something like:
-            # return tweets.filter(Tweet.message.op('regexp')(MAGIC_WORDS))
+            # make this work with either an SQL regex query, or a
+            # case insensitive list of OR clauses
             return [tw for tw in tweets if MAGIC_WORDS_RE.findall(tw.message)]
         session.close()
         return tweets.all()
+
+    def get_tweet_by_id(self, id):
+        """
+        Collect a tweet by id
+        """
+        session = self.get_db_session()
+        return session.query(Tweet).get(id)
 
 
 if __name__ == '__main__':

@@ -24,10 +24,9 @@ def tweet_detail(tweet_id):
     Displays details of a single tweet
     """
     db = DbSession(test=app.config['TESTING'])
-    tweets = [tw for tw in db.load_tweets(just_coke=True) if tw.id==tweet_id]
-    if not tweets:
+    tweet = db.get_tweet_by_id(tweet_id)
+    if tweet is None:
         abort(404)
-    tweet=tweets[0]
     return render_template(
         'tweet_detail.html',
         tweet=tweet

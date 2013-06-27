@@ -42,6 +42,7 @@ def test_load_tweets():
     expected_num = len(expected_ids)
     assert len(tweets) == expected_num, "Found %s, expected %s" % (len(tweets), expected_num)
 
+
 def test_tweets_ordering():
     """
     Import some tweets and make sure they are returned in decending order
@@ -54,6 +55,22 @@ def test_tweets_ordering():
     tweets = db.load_tweets(just_coke=False)
     sentiments = [tw.sentiment for tw in tweets]
     assert sentiments == sorted(sentiments, reverse=True), "Expectd decending sentiment, found %s" % sentiments
+
+
+def test_get_tweet_by_id():
+    """
+    Make sure we can collect a tweet by id
+    """
+    db = DbSession(test=True)
+    db.create_db()
+    db.import_tweets_from_json(tweet_source=mock_tweet_source)
+    real_id = max(tw.id for tw in db.load_tweets(just_coke=True))
+    tweet = db.get_tweet_by_id(real_id)
+    assert tweet.id == real_id, "Expected tweet with id=%s, got id=%s" % (real_id, tweet.id)
+
+    tweets = db.load_tweets(just_coke=False)
+    sentiments = [tw.sentiment for tw in tweets]
+    assert sentiments == sorted(sentiments, reverse=True), "Expected decending sentiment, found %s" % sentiments
 
 
 class TestWebApp(TestCase):
