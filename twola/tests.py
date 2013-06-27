@@ -63,17 +63,26 @@ class TestWebApp(TestCase):
         return app
 
     def setUp(self):
+        self.app.config['TESTING'] = True
         self.db = DbSession(test=True)
         self.db.create_db()
         self.db.import_tweets_from_json(tweet_source=mock_tweet_source)
 
+    def tearDown(self):
+        self.app.config['TESTING'] = False
 
-    def test_tweet_list_page():
+
+    def test_tweet_list_page(self):
         """
         Ensure the list page displays just coke based tweets
         """
         response = self.client.get('/')
         tweets = self.get_context_variable('tweets')
-        in_context_tweets = [tw.message for tw in tweets]
-        expected_tweets = [tw.message for tw in self.db.load_tweets(just_coke=True)]
-        self.assertEqual(in_context_tweets, expected_tweets)
+        in_context_messages = [tw.message for tw in tweets]
+        expected_messages = [tw.message for tw in self.db.load_tweets(just_coke=True)]
+        print in_context_messages
+        print expected_messages
+        self.assertListEqual(in_context_messages, expected_messages)
+
+        for message in expected_messages:
+            self.assertIn(message, response.data)

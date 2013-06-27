@@ -7,6 +7,9 @@ A web app that displays the most positive of tweets about a certain fizzy drink
 Changelog
 ---------
 
+v0.0.3:
+    Add flask webapp
+
 v0.0.2:
     DB model, import and fetch tweets
 

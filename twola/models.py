@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 import json
@@ -51,8 +52,10 @@ class DbSession(object):
     Database wrapper, so we keep a reference to the engine used
     """
     def __init__(self, test=False):
+        self.test = test
+        self.test_db_path = '/tmp/twola-testing.db'
         if test:
-            self.engine = create_engine('sqlite:///:memory:', echo=False)
+            self.engine = create_engine('sqlite:///'+self.test_db_path, echo=False)
         else:
             self.engine = create_engine('sqlite:////tmp/twola.db', echo=False)
 
@@ -64,6 +67,9 @@ class DbSession(object):
         """
         create db if it doesn't exist
         """
+        # use blunt force to ensure a fresh test db each time
+        if self.test and os.path.exists(self.test_db_path):
+            os.remove(self.test_db_path)
         session = self.get_db_session()
         Base.metadata.create_all(self.engine)
 

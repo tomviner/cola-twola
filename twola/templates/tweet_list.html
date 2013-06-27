@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Tweets</title>
+    </head>
+    <body>
+        <h1>Tweets</h1>
+        <ul>
+            {% for tweet in tweets %}
+                <li>
+                    {{ tweet.message }}
+                </li>
+            {% endfor %}
+        </ul>
+    </body>
+</html>
